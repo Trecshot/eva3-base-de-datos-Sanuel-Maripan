@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vista Avanzada de Registros</title>
+    <link rel="stylesheet" href="css/estilos.css">
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        th, td { border: 1px solid #dddddd; padding: 12px; text-align: left; }
+        th { background-color: #2c3e50; color: #ffffff; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        tr:hover { background-color: #f1f1f1; }
+    </style>
+</head>
+<body>
+
+    <nav style="margin-bottom: 20px;">
+        <a href="inicio.html">Volver al Inicio</a>
+    </nav>
+
+    <h2>Matriz de Registros (Entidad Asignada + Usuario)</h2>
+    <p>La siguiente tabla extrae información utilizando el operador de agregación <code>$lookup</code> en MongoDB.</p>
+
+    <table id="tablaAgregacion">
+        <thead>
+            <tr>
+                <th>Código de Operación (Entidad)</th>
+                <th>Detalle (Entidad)</th>
+                <th>Fecha de Transacción</th>
+                <th>Nombre Propietario (Usuario Relacionado)</th>
+                <th>RUT Propietario (Usuario Relacionado)</th>
+            </tr>
+        </thead>
+        <tbody id="cuerpoTablaAgregacion">
+            <tr>
+                <td colspan="5" style="text-align:center;">Ejecutando rutina de extracción de datos...</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', ejecutarRutinaExtraccion);
+
+        async function ejecutarRutinaExtraccion() {
+            try {
+                // Consumo del método GET avanzado
+                const respuesta = await fetch('http://localhost:3000/obtenerEntidadesAsignadas');
+                const tbody = document.getElementById('cuerpoTablaAgregacion');
+                
+                if (!respuesta.ok) {
+                    if(respuesta.status === 404) {
+                        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No existen registros en la colección.</td></tr>';
+                        return;
+                    }
+                    throw new Error('Error en el protocolo de transferencia HTTP.');
+                }
+
+                const datos = await respuesta.json();
+                tbody.innerHTML = ''; // Depuración del contenedor
+
+                // Mapeo vectorial e inyección en el DOM
+                datos.forEach(registro => {
+                    const fila = document.createElement('tr');
+                    
+                    // Manejo del bloque de tiempo
+                    const fechaObjeto = new Date(registro.fechaMovimiento);
+                    const fechaFormateada = fechaObjeto.toLocaleDateString('es-CL');
+
+                    // Utilización de "registro.usuarioRelacionado" debido al $unwind del backend
+                    fila.innerHTML = `
+                        <td>${registro.codigoInterno || 'N/A'}</td>
+                        <td>${registro.detalleOperacion || 'N/A'}</td>
+                        <td>${fechaFormateada}</td>
+                        <td><strong>${registro.usuarioRelacionado ? registro.usuarioRelacionado.nombre : 'Usuario Huérfano'}</strong></td>
+                        <td>${registro.usuarioRelacionado ? registro.usuarioRelacionado.rut : 'N/A'}</td>
+                    `;
+                    tbody.appendChild(fila);
+                });
+
+            } catch (error) {
+                console.error('Fallo en el subproceso de carga:', error);
+                document.getElementById('cuerpoTablaAgregacion').innerHTML = 
+                    `<tr><td colspan="5" style="color:red; text-align:center;">Falló la recuperación de datos: Verifique que la API esté inicializada en el puerto 3000.</td></tr>`;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+.principal{
+    padding-top: 20px;
+}
+
+.alerta{
+    background-color: #f8d7da;
+    color: red;
+    border: 1px solid red;
+}
